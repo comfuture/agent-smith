@@ -148,10 +148,25 @@ class HeadlessChromeBrowser(AsyncComputer):
     async def drag(self, path: List[Dict[str, int]]) -> None:
         if not path:
             return
+
         await self._page.mouse.move(path[0]["x"], path[0]["y"])
         await self._page.mouse.down()
+
+        prev_point = path[0]
         for point in path[1:]:
-            await self._page.mouse.move(point["x"], point["y"])
+            # Calculate Euclidean distance between points
+            distance = (
+                (point["x"] - prev_point["x"]) ** 2
+                + (point["y"] - prev_point["y"]) ** 2
+            ) ** 0.5
+
+            # Set steps based on distance (1 step per 10 pixels)
+            steps = max(1, int(distance / 10))
+            await asyncio.sleep(0.01)  # Small delay to simulate human-like dragging
+            await self._page.mouse.move(point["x"], point["y"], steps=steps)
+            prev_point = point
+
+        await asyncio.sleep(0.01)  # Small delay before releasing the mouse
         await self._page.mouse.up()
 
     # --- Extra browser-oriented actions ---
