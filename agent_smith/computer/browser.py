@@ -16,7 +16,7 @@ CUA_KEY_TO_PLAYWRIGHT_KEY = {
     "backspace": "Backspace",
     "capslock": "CapsLock",
     "cmd": "Meta",
-    "ctrl": "Control",
+    "ctrl": "ControlOrMeta",
     "delete": "Delete",
     "end": "End",
     "enter": "Enter",
@@ -130,9 +130,27 @@ class HeadlessChromeBrowser(AsyncComputer):
         await self._page.mouse.move(x, y)
 
     async def keypress(self, keys: List[str]) -> None:
+        modifier_keys = []
+        regular_keys = []
+
         for key in keys:
             mapped_key = CUA_KEY_TO_PLAYWRIGHT_KEY.get(key.lower(), key)
-            await self._page.keyboard.press(mapped_key)
+            if mapped_key in ["Control", "Alt", "Shift", "Meta", "ControlOrMeta"]:
+                modifier_keys.append(mapped_key)
+            else:
+                regular_keys.append(mapped_key)
+
+        # Press down all modifier keys first
+        for modifier in modifier_keys:
+            await self._page.keyboard.down(modifier)
+
+        # Press and release regular keys
+        for key in regular_keys:
+            await self._page.keyboard.press(key)
+
+        # Release all modifier keys
+        for modifier in reversed(modifier_keys):
+            await self._page.keyboard.up(modifier)
 
     async def drag(self, path: List[Dict[str, int]]) -> None:
         if not path:
